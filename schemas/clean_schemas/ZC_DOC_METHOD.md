@@ -1,0 +1,24 @@
+# ZC_DOC_METHOD
+
+**Source:** https://datahandbook.epic.com/ClarityDictionary/Details?tblName=ZC_DOC_METHOD
+
+## Metadata
+
+| Property | Value |
+| --- | --- |
+| Type | Extracted Table |
+| Load Type | FULL |
+| Load Frequency | INCREMENTAL |
+| Chronicles INI | N/A |
+| Release Version | Rel February 2023 |
+| May contain EHI? | No |
+
+## Columns
+
+| Column | Type | Description |
+| --- | --- | --- |
+| DOC_METHOD_C | INTEGER |  |
+| NAME | VARCHAR (254) |  |
+| TITLE | VARCHAR (254) |  |
+| ABBR | VARCHAR (254) |  |
+| INTERNAL_ID | INTEGER |  |

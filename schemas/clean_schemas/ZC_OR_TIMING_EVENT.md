@@ -1,0 +1,28 @@
+# ZC_OR_TIMING_EVENT
+
+**Source:** https://datahandbook.epic.com/ClarityDictionary/Details?tblName=ZC_OR_TIMING_EVENT
+
+## Description
+
+This table contains the category information for the case timing events associated with a procedural case.
+
+## Metadata
+
+| Property | Value |
+| --- | --- |
+| Type | Extracted Table |
+| Load Type | FULL |
+| Load Frequency | INCREMENTAL |
+| Chronicles INI | N/A |
+| Release Version | Rel 2014 |
+| May contain EHI? | No |
+
+## Columns
+
+| Column | Type | Description |
+| --- | --- | --- |
+| TIMING_EVENT_C | INTEGER |  |
+| NAME | VARCHAR (254) |  |
+| TITLE | VARCHAR (254) |  |
+| ABBR | VARCHAR (254) |  |
+| INTERNAL_ID | INTEGER |  |
