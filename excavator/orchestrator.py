@@ -362,9 +362,9 @@ _AMEND_TOOL = {
 }
 
 
-def _find_sql_files(audit_path: Path) -> dict:
+def _find_sql_files(audit_path: Path, out_dir: Path = None) -> dict:
     stem = audit_path.stem
-    d    = audit_path.parent
+    d    = out_dir if out_dir is not None else audit_path.parent
     return {
         "cohort":             d / f"{stem}_1_cohort.sql",
         "demographics":       d / f"{stem}_2_demographics.sql",
@@ -566,9 +566,34 @@ def main():
                         help="Generate view-referencing mode for Databricks notebook use")
     parser.add_argument("--no-validators", action="store_true",
                         help="Skip IRB auditor and contract checker (faster, less thorough)")
+    script_group = parser.add_argument_group(
+        "script selection",
+        "Flags to generate specific scripts only. If none are given, all applicable scripts "
+        "are generated (default). Mix freely: e.g. --cohort --demographics."
+    )
+    script_group.add_argument("--cohort",            action="store_true", help="Script 1: cohort eligibility")
+    script_group.add_argument("--demographics",      action="store_true", help="Script 2: patient demographics")
+    script_group.add_argument("--addresses",         action="store_true", help="Script 3: address history")
+    script_group.add_argument("--clinical-pathology",action="store_true", help="Script 4: staging, mortality, notes",
+                              dest="clinical_pathology")
+    script_group.add_argument("--tempus",            action="store_true", help="Script 5: Tempus genomic data")
+    script_group.add_argument("--attrition",         action="store_true", help="Script 6: CONSORT attrition counts")
+    parser.add_argument("--output-dir", default=None, metavar="PATH",
+                        help="Directory to write SQL and reports into. Defaults to excavator_out/ "
+                             "next to the audit JSON when the audit is in claim_out/, otherwise "
+                             "writes next to the audit JSON.")
     args = parser.parse_args()
 
     tempus_codes = _parse_tempus_codes(args.tempus_codes)
+
+    _any_script_flag = any([args.cohort, args.demographics, args.addresses,
+                            args.clinical_pathology, args.tempus, args.attrition])
+    run_cohort    = args.cohort            or not _any_script_flag
+    run_demo      = args.demographics      or not _any_script_flag
+    run_addr      = args.addresses         or not _any_script_flag
+    run_clinical  = args.clinical_pathology or not _any_script_flag
+    run_tempus    = args.tempus            or not _any_script_flag
+    run_attrition = args.attrition         or not _any_script_flag
 
     if args.amend:
         audit_path = Path(args.amend).resolve()
@@ -634,34 +659,42 @@ def main():
                                  tempus_codes=tempus_codes)
 
     # Scripts 2, 3, 4, 5 are independent -- run in parallel after cohort
-    active_parts = ["demographics (2)", "clinical_pathology (4)"]
-    if generate_addresses:
-        active_parts.append("addresses (3)")
-    if generate_tempus_sql:
-        active_parts.append(f"Tempus (5, {len(tempus_elements)} elements)")
-    print(f"Generating {', '.join(active_parts)} in parallel...")
+    demo_sql = addr_sql = clinical_sql = tempus_sql = None
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        f_demo     = executor.submit(demographics.generate, client, fields, clarity_elements, schemas)
-        f_addr     = (executor.submit(addresses.generate, client, fields, clarity_elements, schemas)
-                      if generate_addresses else None)
-        f_clinical = executor.submit(clinical_pathology.generate, client, fields, clarity_elements, schemas)
-        f_tempus   = (executor.submit(tempus.generate, client, fields, tempus_elements, tempus_schema_ctx)
-                      if generate_tempus_sql else None)
+    need_demo     = run_demo
+    need_addr     = run_addr and generate_addresses
+    need_clinical = run_clinical
+    need_tempus   = run_tempus and generate_tempus_sql
 
-        demo_sql     = f_demo.result()
-        addr_sql     = f_addr.result()     if f_addr     else None
-        clinical_sql = f_clinical.result()
-        tempus_sql   = f_tempus.result()   if f_tempus   else None
+    active_parts = []
+    if need_demo:     active_parts.append("demographics (2)")
+    if need_clinical: active_parts.append("clinical_pathology (4)")
+    if need_addr:     active_parts.append("addresses (3)")
+    if need_tempus:   active_parts.append(f"Tempus (5, {len(tempus_elements)} elements)")
+
+    if active_parts:
+        print(f"Generating {', '.join(active_parts)} in parallel...")
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            f_demo     = executor.submit(demographics.generate, client, fields, clarity_elements, schemas) if need_demo     else None
+            f_addr     = executor.submit(addresses.generate,    client, fields, clarity_elements, schemas) if need_addr     else None
+            f_clinical = executor.submit(clinical_pathology.generate, client, fields, clarity_elements, schemas) if need_clinical else None
+            f_tempus   = executor.submit(tempus.generate,       client, fields, tempus_elements, tempus_schema_ctx) if need_tempus   else None
+
+            demo_sql     = f_demo.result()     if f_demo     else None
+            addr_sql     = f_addr.result()     if f_addr     else None
+            clinical_sql = f_clinical.result() if f_clinical else None
+            tempus_sql   = f_tempus.result()   if f_tempus   else None
 
     # Normalize cohort SQL
     cohort_sql = normalize_cohort_sql(cohort_sql)
 
     # Embed cohort into each extraction script and normalize
-    demo_sql     = _collapse_comment_blanks(embed_cohort(cohort_sql, strip_fences(demo_sql)))
-    demo_sql     = re.sub(r'\bDATETIME\b', 'TIMESTAMP', demo_sql)
-    clinical_sql = _collapse_comment_blanks(embed_cohort(cohort_sql, strip_fences(clinical_sql)))
-    clinical_sql = re.sub(r'\bDATETIME\b', 'TIMESTAMP', clinical_sql)
+    if demo_sql:
+        demo_sql = _collapse_comment_blanks(embed_cohort(cohort_sql, strip_fences(demo_sql)))
+        demo_sql = re.sub(r'\bDATETIME\b', 'TIMESTAMP', demo_sql)
+    if clinical_sql:
+        clinical_sql = _collapse_comment_blanks(embed_cohort(cohort_sql, strip_fences(clinical_sql)))
+        clinical_sql = re.sub(r'\bDATETIME\b', 'TIMESTAMP', clinical_sql)
     if addr_sql:
         addr_sql = _collapse_comment_blanks(embed_cohort(cohort_sql, strip_fences(addr_sql)))
         addr_sql = re.sub(r'\bDATETIME\b', 'TIMESTAMP', addr_sql)
@@ -671,12 +704,11 @@ def main():
 
     # Quality checks
     print("\nRunning quality checks...")
-    qc_scripts = [("cohort", cohort_sql), ("demographics", demo_sql),
-                  ("clinical_pathology", clinical_sql)]
-    if addr_sql:
-        qc_scripts.append(("addresses", addr_sql))
-    if tempus_sql:
-        qc_scripts.append(("tempus", tempus_sql))
+    qc_scripts = [("cohort", cohort_sql)]
+    if demo_sql:     qc_scripts.append(("demographics",       demo_sql))
+    if clinical_sql: qc_scripts.append(("clinical_pathology", clinical_sql))
+    if addr_sql:     qc_scripts.append(("addresses",          addr_sql))
+    if tempus_sql:   qc_scripts.append(("tempus",             tempus_sql))
     any_errors = any(run_quality_checks(sql, lbl) for lbl, sql in qc_scripts)
     if not any_errors:
         print("  All quality checks passed")
@@ -687,13 +719,10 @@ def main():
 
     if actual_schema:
         print("\nValidating SQL against data lake schema...")
-        to_validate = [
-            ("cohort",             cohort_sql),
-            ("demographics",       demo_sql),
-            ("clinical_pathology", clinical_sql),
-        ]
-        if addr_sql:
-            to_validate.append(("addresses", addr_sql))
+        to_validate = [("cohort", cohort_sql)]
+        if demo_sql:     to_validate.append(("demographics",       demo_sql))
+        if clinical_sql: to_validate.append(("clinical_pathology", clinical_sql))
+        if addr_sql:     to_validate.append(("addresses",          addr_sql))
         sql_vars = dict(to_validate)
 
         for lbl, sql in list(sql_vars.items()):
@@ -724,10 +753,9 @@ def main():
                 print(f"  {lbl}: OK")
 
         cohort_sql   = sql_vars["cohort"]
-        demo_sql     = sql_vars["demographics"]
-        clinical_sql = sql_vars["clinical_pathology"]
-        if addr_sql:
-            addr_sql = sql_vars.get("addresses", addr_sql)
+        if demo_sql:     demo_sql     = sql_vars.get("demographics",       demo_sql)
+        if clinical_sql: clinical_sql = sql_vars.get("clinical_pathology", clinical_sql)
+        if addr_sql:     addr_sql     = sql_vars.get("addresses",          addr_sql)
     else:
         print(f"\n  NOTE: epic_clarity_columns.tsv not found -- skipping schema validation.")
         fix_results = {}
@@ -743,17 +771,13 @@ def main():
         else:
             print("  tempus: OK")
 
-    # Validators (IRB auditor + contract checker)
+    # Validators (IRB auditor + contract checker) -- run on whichever scripts were generated
     if not args.no_validators:
-        scripts_for_audit = {
-            "cohort":             cohort_sql,
-            "demographics":       demo_sql,
-            "clinical_pathology": clinical_sql,
-        }
-        if addr_sql:
-            scripts_for_audit["addresses"] = addr_sql
-        if tempus_sql:
-            scripts_for_audit["tempus"] = tempus_sql
+        scripts_for_audit = {"cohort": cohort_sql}
+        if demo_sql:     scripts_for_audit["demographics"]       = demo_sql
+        if clinical_sql: scripts_for_audit["clinical_pathology"] = clinical_sql
+        if addr_sql:     scripts_for_audit["addresses"]          = addr_sql
+        if tempus_sql:   scripts_for_audit["tempus"]             = tempus_sql
 
         print("\nRunning validators...")
         with ThreadPoolExecutor(max_workers=2) as ex:
@@ -766,49 +790,65 @@ def main():
         contract_checker.print_contract_results(contract_results)
 
     # Generate attrition SQL (deterministic)
-    attrition_sql = attrition.generate(cohort_sql, fields)
-    attrition_sql = _collapse_comment_blanks(attrition_sql)
+    attrition_sql = None
+    if run_attrition:
+        attrition_sql = _collapse_comment_blanks(attrition.generate(cohort_sql, fields))
 
     # Gap report
-    gap_md = build_gap_report(fields, gap_elements, missing, list(schemas.keys()),
-                              tempus_elements=tempus_elements)
+    gap_md = None
+    if not _any_script_flag:
+        gap_md = build_gap_report(fields, gap_elements, missing, list(schemas.keys()),
+                                  tempus_elements=tempus_elements)
 
-    # Write outputs next to the audit JSON
-    stem    = audit_path.stem
-    out_dir = audit_path.parent
+    # Resolve output directory
+    if args.output_dir:
+        out_dir = Path(args.output_dir)
+    elif audit_path.parent.name == "claim_out":
+        out_dir = audit_path.parent.parent / "excavator_out"
+    else:
+        out_dir = audit_path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    paths = _find_sql_files(audit_path)
-
-    cohort_path   = paths["cohort"]
-    demo_path     = paths["demographics"]
-    clinical_path = paths["clinical_pathology"]
-    attrn_path    = paths["attrition"]
-
-    cohort_path.write_text(cohort_sql, encoding="utf-8")
-    demo_path.write_text(demo_sql, encoding="utf-8")
-    clinical_path.write_text(clinical_sql, encoding="utf-8")
-    attrn_path.write_text(attrition_sql, encoding="utf-8")
-
-    if addr_sql:
-        paths["addresses"].write_text(addr_sql, encoding="utf-8")
-    if tempus_sql:
-        paths["tempus"].write_text(tempus_sql, encoding="utf-8")
-
-    gap_path = out_dir / f"{stem}_gap_report.md"
-    gap_path.write_text(gap_md, encoding="utf-8")
+    stem  = audit_path.stem
+    paths = _find_sql_files(audit_path, out_dir=out_dir)
 
     def kb(p): return p.stat().st_size // 1024
 
     print(f"\nOutputs written:")
+
+    cohort_path = paths["cohort"]
+    cohort_path.write_text(cohort_sql, encoding="utf-8")
     print(f"  Script 1 -- cohort:             {cohort_path.name} ({kb(cohort_path)} KB)")
-    print(f"  Script 2 -- demographics:       {demo_path.name} ({kb(demo_path)} KB)")
+
+    if demo_sql:
+        demo_path = paths["demographics"]
+        demo_path.write_text(demo_sql, encoding="utf-8")
+        print(f"  Script 2 -- demographics:       {demo_path.name} ({kb(demo_path)} KB)")
+
     if addr_sql:
-        print(f"  Script 3 -- addresses:          {paths['addresses'].name} ({kb(paths['addresses'])} KB)")
-    print(f"  Script 4 -- clinical_pathology: {clinical_path.name} ({kb(clinical_path)} KB)")
+        addr_path = paths["addresses"]
+        addr_path.write_text(addr_sql, encoding="utf-8")
+        print(f"  Script 3 -- addresses:          {addr_path.name} ({kb(addr_path)} KB)")
+
+    if clinical_sql:
+        clinical_path = paths["clinical_pathology"]
+        clinical_path.write_text(clinical_sql, encoding="utf-8")
+        print(f"  Script 4 -- clinical_pathology: {clinical_path.name} ({kb(clinical_path)} KB)")
+
     if tempus_sql:
-        print(f"  Script 5 -- Tempus extraction:  {paths['tempus'].name} ({kb(paths['tempus'])} KB)")
-    print(f"  Script 6 -- attrition:          {attrn_path.name} ({kb(attrn_path)} KB)")
-    print(f"  Gap report:                     {gap_path.name}")
+        tempus_path = paths["tempus"]
+        tempus_path.write_text(tempus_sql, encoding="utf-8")
+        print(f"  Script 5 -- Tempus extraction:  {tempus_path.name} ({kb(tempus_path)} KB)")
+
+    if attrition_sql:
+        attrn_path = paths["attrition"]
+        attrn_path.write_text(attrition_sql, encoding="utf-8")
+        print(f"  Script 6 -- attrition:          {attrn_path.name} ({kb(attrn_path)} KB)")
+
+    if gap_md:
+        gap_path = out_dir / f"{stem}_gap_report.md"
+        gap_path.write_text(gap_md, encoding="utf-8")
+        print(f"  Gap report:                     {gap_path.name}")
 
     if any(r.get("had_errors") for r in fix_results.values()):
         ts           = datetime.now().strftime("%Y-%m-%d %H:%M")

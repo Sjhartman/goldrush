@@ -1192,7 +1192,12 @@ Output is written to --output-dir (or next to the IRB document if not specified)
     irb_path    = Path(argv[0])
     request_arg = argv[1]
     study_dir   = irb_path.parent
-    output_dir  = Path(output_dir_arg) if output_dir_arg else study_dir
+    if output_dir_arg:
+        output_dir = Path(output_dir_arg)
+    elif study_dir.name == "input":
+        output_dir = study_dir.parent / "claim_out"
+    else:
+        output_dir = study_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     run_id      = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
@@ -1235,7 +1240,8 @@ Output is written to --output-dir (or next to the IRB document if not specified)
 
     irb_stem   = irb_path.stem
     req_stem   = Path(request_arg).stem if Path(request_arg).exists() else "inline"
-    base_name  = f"{study_dir.name}__{irb_stem}__{req_stem}__{run_id}"
+    label      = output_dir.parent.name
+    base_name  = f"{label}__{irb_stem}__{req_stem}__{run_id}"
 
     audit_path = write_audit_log(
         str(irb_path), request_arg, irb_format, request_format,

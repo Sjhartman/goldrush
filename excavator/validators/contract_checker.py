@@ -58,16 +58,36 @@ def check_script(
     """
     prompt = f"""You are reviewing a Databricks SQL script for cohort contract compliance.
 
-THE CONTRACT: Every CTE that reads a large raw table MUST join `eligible_cohort` as
-its VERY FIRST join. An intermediate "raw scan" CTE that reads the large table without
-a cohort join -- even if a subsequent CTE joins eligible_cohort -- is a violation.
+THE CONTRACT: Every CTE that reads a large raw patient-fact table MUST join
+`eligible_cohort` as its VERY FIRST join. An intermediate "raw scan" CTE that reads
+the large table without a cohort join -- even if a subsequent CTE joins eligible_cohort
+-- is a violation.
 
 LARGE TABLES REQUIRING THIS TREATMENT:
 {_LARGE_TABLES_LIST}
 
+IMPORTANT EXCEPTIONS -- do NOT flag these as violations:
+
+1. SCRIPT 1 (COHORT DEFINITION): Script 1 is the script that BUILDS eligible_cohort.
+   CTEs defined before eligible_cohort in Script 1 cannot join it because it does not
+   exist yet. In Script 1, `tempus_pat_ids` (the Tempus-patient bridge CTE) is the
+   valid cohort anchor and plays the same role as eligible_cohort does in later scripts.
+   Any large-table CTE in Script 1 that joins `tempus_pat_ids` as its first join is
+   COMPLIANT -- do not flag it. Also, eligible_cohort and excluded_patients being
+   DEFINED in Script 1 is expected and correct -- do not flag their definitions.
+   You can detect Script 1 by the presence of a CTE named `tempus_patients` or
+   `tempus_pat_ids` near the top, and eligible_cohort being defined (not just referenced)
+   within the script.
+
+2. DIMENSION / LOOKUP TABLES: EDG_CURRENT_ICD10 is a code-lookup table (DX_ID -> CODE)
+   with no PAT_ID column. A CTE that pre-filters it by ICD code range (e.g.,
+   `WHERE CODE LIKE 'C15%'`) is a valid and intentional dimension pre-filter, not a
+   patient-fact scan. Do NOT flag EDG_CURRENT_ICD10 pre-filter CTEs as violations.
+
 Also check:
+- No correlated subqueries against large tables (use LEFT JOIN on a pre-aggregated CTE instead)
 - No NOT IN (SELECT ... FROM curated...) patterns (use LEFT ANTI JOIN instead)
-- No CTE redefines eligible_cohort or excluded_patients
+- No CTE in Scripts 2-6 redefines eligible_cohort or excluded_patients
 
 SCRIPT ({label}):
 {sql}

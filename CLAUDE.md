@@ -32,11 +32,11 @@ venv/bin/python data-claim.py <irb_document> <request_document>
 # With clarifications (DOCX ICD tables in the clarification supersede the request)
 venv/bin/python data-claim.py <irb_doc> <request_doc> --clarification <clarification_doc>
 
-# Write outputs to a reports/ subfolder (recommended for goldrush_data convention)
-venv/bin/python data-claim.py <irb_doc> <request_doc> --output-dir <path/to/reports>
-
 # Override the I2DB/RDC authorization check (reviewer discretion only)
 venv/bin/python data-claim.py <irb_doc> <request_doc> --override-i2db
+
+# Override output directory (default: claim_out/ next to input/, or next to IRB doc)
+venv/bin/python data-claim.py <irb_doc> <request_doc> --output-dir <path>
 
 # Override ICD reference file
 venv/bin/python data-claim.py <irb_doc> <request_doc> --icd-file ICD10_codes/icd10cm-oncology-2026.csv
@@ -84,31 +84,35 @@ Outputs written next to the audit JSON (into the PI subfolder):
 
 ## Research Group Folder Convention
 
-Collaborator data lives **outside** this repo in the sibling directory `goldrush_data/` (not tracked by git). Each PI has a subfolder there. Inside that, each study gets its own **sub-project folder**. Source documents live in the sub-project folder; all generated outputs go into a `reports/` subfolder passed via `--output-dir`.
+Collaborator data lives **outside** this repo in the sibling directory `goldrush_data/` (not tracked by git). Each PI has a subfolder. The standard layout within a PI folder uses three sibling directories that the tools auto-detect:
 
 ```
 goldrush_data/
   Dr_Smith/
-    EOCRC_2026/                        ← sub-project folder, named by study
+    input/                             ← source documents (IRB, request, clarifications)
       irb_smith.pdf                    ← filename must start with "irb"
       request_smith.docx               ← filename must start with "request"
       clarifications.docx              ← optional, passed via --clarification
-      reports/                         ← pass as --output-dir to data-claim.py
-        report__*.md                   ← data-claim.py output
-        audit__*.json                  ← data-claim.py output → input to excavator
-        audit__*_1_cohort.sql          ← excavator output (written next to audit JSON)
-        audit__*_2_demographics.sql
-        audit__*_3_addresses.sql
-        audit__*_4_clinical_pathology.sql
-        audit__*_5_tempus.sql
-        audit__*_6_attrition.sql
-        audit__*_gap_report.md
-        audit__*_schema_fixes.md
+    claim_out/                         ← data-claim.py writes here automatically
+      report__*.md
+      audit__*.json                    ← input to excavator
+    excavator_out/                     ← excavator writes here automatically
+      audit__*_1_cohort.sql
+      audit__*_2_demographics.sql
+      audit__*_3_addresses.sql
+      audit__*_4_clinical_pathology.sql
+      audit__*_5_tempus.sql
+      audit__*_6_attrition.sql
+      audit__*_gap_report.md
+      audit__*_schema_fixes.md
 ```
 
-Name sub-project folders by study (e.g. `EOCRC_2026`, `GI_HPB_Jafari`, `Breast_Hirbe`) rather than generic `project1`, `project2`. A PI with multiple concurrent studies will have multiple sub-project folders.
+**Auto-detection rules:**
+- `data-claim.py`: if the IRB document is inside a folder named `input/`, outputs default to `../claim_out/`
+- `excavator/orchestrator.py`: if the audit JSON is inside a folder named `claim_out/`, outputs default to `../excavator_out/`
+- Both tools accept `--output-dir <path>` to override the default.
 
-data-claim.py writes to `--output-dir` (created if absent). excavator/orchestrator.py writes next to the audit JSON — so pass the audit JSON path inside `reports/` and SQL lands there automatically.
+A PI with multiple concurrent studies may have multiple sets of input/claim_out/excavator_out folders (e.g., name the parent by study: `Dr_Smith/EOCRC_2026/input/`, `Dr_Smith/Breast_2026/input/`).
 
 ---
 
