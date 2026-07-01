@@ -1,0 +1,15 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# macOS
+.DS_Store
+
+# Large generated source files (regenerate with tools/filter_icd10.py)
+ICD10_codes/icd10cm-order-2026.txt
+
+# Raw scraped schemas (regenerate with tools/scrape_clarity.py + postprocess.py)
+schemas/raw_schemas/
