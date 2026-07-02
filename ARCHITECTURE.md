@@ -276,7 +276,7 @@ See `inspector/PLACEHOLDER.md` for the specification stub.
 - ASCII only — no Unicode in SQL text or comments
 - No trailing semicolon after final SELECT
 - No block comments (`/* */`) — use `--` only
-- `DATE_REAL` columns (PAT_ENC_DATE_REAL, CONTACT_DATE_REAL) are DOUBLE (days since 1899-12-30) — use `DATE_ADD(DATE '1899-12-30', CAST(col AS INT))`
+- `DATE_REAL` columns (PAT_ENC_DATE_REAL, CONTACT_DATE_REAL) are DOUBLE (days since 1840-12-31) — use `DATE_ADD(DATE '1840-12-31', CAST(col AS INT))` — WashU/BJC epoch is 1840-12-31, NOT the standard Epic/Excel 1899-12-30 (empirically verified)
 - DATETIME not supported — use TIMESTAMP or DATE
 - UNION ALL column counts must match exactly across all branches
 

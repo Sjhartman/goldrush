@@ -108,6 +108,7 @@ goldrush_data/
 ```
 
 **Auto-detection rules:**
+
 - `data-claim.py`: if the IRB document is inside a folder named `input/`, outputs default to `../claim_out/`
 - `excavator/orchestrator.py`: if the audit JSON is inside a folder named `claim_out/`, outputs default to `../excavator_out/`
 - Both tools accept `--output-dir <path>` to override the default.
@@ -164,7 +165,7 @@ These are not style preferences — violations cause runtime errors.
 2. **No trailing semicolon** after the final SELECT.
 3. **Nothing after the final SELECT** — no block comments, no secondary queries.
 4. **No block comments** (`/* ... */`) — use `--` line comments only.
-5. **DATE_REAL columns** (PAT_ENC_DATE_REAL, CONTACT_DATE_REAL, etc.) are stored as DOUBLE (days since 1899-12-30). Never `CAST(col AS DATE)`. Use: `DATE_ADD(DATE '1899-12-30', CAST(col AS INT))`
+5. **DATE_REAL columns** (PAT_ENC_DATE_REAL, CONTACT_DATE_REAL, etc.) are stored as DOUBLE (days since 1840-12-31). Never `CAST(col AS DATE)`. Use: `DATE_ADD(DATE '1840-12-31', CAST(col AS INT))` — WashU/BJC epoch is 1840-12-31, NOT the standard Epic/Excel 1899-12-30 (empirically verified against PAT_ENC and PAT_ENC_DX).
 6. **DATETIME not supported** — use TIMESTAMP or DATE.
 7. **UNION ALL column counts** must match exactly across all branches. One NULL per line with an alias matching the first branch.
 8. **No correlated subqueries** (`NOT IN (SELECT ... FROM large_table)`). Use LEFT ANTI JOIN or a CTE pre-filter.

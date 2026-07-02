@@ -24,8 +24,10 @@ DATABRICKS SQL SYNTAX RULES -- these are hard requirements, not style preference
 5. Use TIMESTAMP not DATETIME. Databricks does not support the DATETIME type;
    CAST(x AS DATETIME) raises UNSUPPORTED_DATATYPE. Use TIMESTAMP or DATE instead.
 6. Epic DATE_REAL columns (e.g. PAT_ENC_DATE_REAL, CONTACT_DATE_REAL) are stored as
-   DOUBLE (days since 1899-12-30). Never use CAST(col AS DATE) on them. Use:
-       DATE_ADD(DATE '1899-12-30', CAST(col AS INT))
+   DOUBLE (days since 1840-12-31). Never use CAST(col AS DATE) on them. Use:
+       DATE_ADD(DATE '1840-12-31', CAST(col AS INT))
+   NOTE: WashU/BJC uses epoch 1840-12-31, NOT the standard Epic/Excel epoch 1899-12-30.
+   Verified empirically against PAT_ENC and PAT_ENC_DX (20+ rows, 100% match).
 7. Only reference tables explicitly provided in the SCHEMAS section. Never reference
    any curated.epic_clarity table not in the schemas, even if you believe it exists.
    Known unavailable tables and their replacements for this data lake:
