@@ -137,6 +137,7 @@ Known differences:
 - `EDG_CURRENT_ICD10`: no DESCRIPTION column — only `DX_ID, CODE, LINE`
 - `AP_DIAG_CODES`, `LAB_CASE_ADDEND`: do not exist in this environment
 - `V_CANCER_STAGING`: notoriously poorly filled — **never use as a primary source for staging**. Always include as supplementary data only and flag in comments.
+- `PROBLEM_LIST`: date columns are **timestamps**, not DATE_REAL floats. Use `CAST(pl.noted_date AS DATE)` directly — never `DATE_ADD(DATE '1840-12-31', CAST(pl.noted_date AS INT))` or any variant. `DATE_OF_ENTRY_REAL` does not exist; `date_of_entry` is also a timestamp and must be cast the same way.
 
 ### Tempus
 
@@ -154,6 +155,10 @@ Confirmed `curated.tempus.order` columns (complete list):
 **No date fields. No biomarker fields.** TMB, MSI, tumor purity, variant calls, and report sign-out dates are NOT in SQL — they live in Tempus catalog TSV files (Python layer only).
 
 Backtick required: `curated.tempus.\`order\`` (ORDER is a SQL reserved word).
+
+**Do not use `curated.tempus.specimens_v2`.** It is missing rows that exist in `curated.tempus.specimens`. Use `curated.tempus.specimens` as the primary specimen source. Note that `specimens` does not have `primarysamplesite`, `sampletype`, `tempusSampleId`, or diagnosis ICD fields -- those only exist in `specimens_v2`. If those columns are needed, LEFT JOIN `specimens_v2` on `(tempusId, reportId)` to fill them in where available, but treat `specimens` as the authoritative row source.
+
+`curated.tempus.specimens` columns: `collectionDate`, `receiptDate`, `sampleCategory`, `sampleSite`, `contentsReceivedLabel`, `notes`, `institutionData_caseId`, `institutionData_blockId`, `institutionData_tumorPercentage`, `tempusId`, `reportId`
 
 ---
 
@@ -263,28 +268,30 @@ Oncology ICD-10 codes are in `ICD10_codes/icd10cm-oncology-2026.csv`. This cover
 To regenerate (when the annual CMS file updates):
 
 ```bash
-venv/bin/python tools/filter_icd10.py
+python schema_tools/filter_icd10.py
 ```
 
 ---
 
-## Schema Maintenance (tools/)
+## Schema Maintenance (schema_tools/)
+
+All scripts in `schema_tools/` are run manually on the cluster. Goldrush is an archive for these scripts — it does not run them automatically.
 
 ### Rebuild the Clarity table index
 
 ```bash
 # Scrape Epic Data Handbook for new/updated tables
-venv/bin/python tools/scrape_clarity.py
+python schema_tools/scrape_clarity_handbook.py
 
 # Post-process into clean_schemas/ and regenerate index.md + index_brief.md
-venv/bin/python tools/postprocess.py
+python schema_tools/clarity_schema_postprocess.py
 ```
 
 `index_brief.md` (one-line per table, ~5K tokens) is used in excavator classification pass 1.
 `index.md` (full descriptions, ~15K tokens) is NOT sent in any API call — it's a reference only.
 `clean_schemas/<TABLE>.md` files are loaded on demand after pass 1 identifies candidate tables.
 
-### Collect data lake column list
+### Collect Databricks column list (Epic Clarity)
 
 Run in a Databricks notebook:
 
@@ -296,10 +303,20 @@ print("\n".join(names))
 Paste output into `schemas/clarity_tables.txt`, then:
 
 ```bash
-venv/bin/python tools/collect_schemas.py
+python schema_tools/scrape_databricks_schemas.py
 ```
 
 This produces `schemas/epic_clarity_columns.tsv`.
+
+### Collect Tempus catalog schema
+
+Update `CATALOG_DIR` in `schema_tools/tempus_catalog_schema.py` to the current catalog version, then run on the cluster:
+
+```bash
+python schema_tools/tempus_catalog_schema.py
+```
+
+Output is written to `tempus_catalog_schema.txt` in whichever directory the script is run from. Copy the result into `schemas/` and check it into goldrush after each catalog version update.
 
 ---
 

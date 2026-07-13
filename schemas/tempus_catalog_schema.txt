@@ -1,0 +1,412 @@
+Tempus Catalog Schema
+Directory: /mnt/citadel3/clinical/data/Tempus/dashboard_inventory_files/tempus_catalog_260616_v2.0_git72cf943/tempus-catalog/backend/data_explorer
+Files scanned: 23
+Sample size for inference: 5,000 rows
+
+========================================================================
+FILE: accessions_duplicated_by_workflow.tsv
+========================================================================
+  Rows: 65  |  Columns: 3
+  (dtype / null stats from first 65 rows)
+
+  Column             Dtype          Null%      Uniq
+  -------------------------------------------------
+  md5                object          0.0%        65
+  hard_filtered      object          0.0%        38
+  non_hard_filtered  object          0.0%        38
+
+========================================================================
+FILE: accsn_variant_germline.tsv
+========================================================================
+  Rows: 109,587,746  |  Columns: 12
+  (dtype / null stats from first 5,000 rows)
+
+  Column              Dtype          Null%      Uniq
+  --------------------------------------------------
+  accessionId         object          0.0%         3
+  Genomic_Variant     object          0.0%     1,755
+  Gene                object          0.0%       535
+  Consequence         object          0.0%        21
+  Transcript          object          0.0%     1,291
+  Transcript_Biotype  object          0.0%         1
+  HGVS.C              object          0.0%     2,761
+  HGVS.P              object         69.2%       953
+  Accession_Count     int64           0.0%     1,624
+  classification      float64       100.0%         0
+  reporting_status    object          0.0%         1
+  tempus_test         object          0.0%         3
+
+========================================================================
+FILE: accsn_variant_germline_filtered.tsv
+========================================================================
+  Rows: 108,588,698  |  Columns: 12
+  (dtype / null stats from first 5,000 rows)
+
+  Column              Dtype          Null%      Uniq
+  --------------------------------------------------
+  accessionId         object          0.0%         3
+  Genomic_Variant     object          0.0%     1,808
+  Gene                object          0.0%       544
+  Consequence         object          0.0%        21
+  Transcript          object          0.0%     1,306
+  Transcript_Biotype  object          0.0%         1
+  HGVS.C              object          0.0%     2,802
+  HGVS.P              object         69.9%       948
+  Accession_Count     int64           0.0%     1,688
+  classification      float64       100.0%         0
+  reporting_status    object          0.0%         1
+  tempus_test         object          0.0%         2
+
+========================================================================
+FILE: accsn_variant_somatic.tsv
+========================================================================
+  Rows: 5,305,238  |  Columns: 12
+  (dtype / null stats from first 5,000 rows)
+
+  Column              Dtype          Null%      Uniq
+  --------------------------------------------------
+  accessionId         object          0.0%        39
+  Genomic_Variant     object          0.0%       427
+  Gene                object          0.0%       259
+  Consequence         object          0.0%        28
+  Transcript          object          0.0%       606
+  Transcript_Biotype  object          0.0%         1
+  HGVS.C              object          0.0%       732
+  HGVS.P              object         76.1%       615
+  allelicFraction     float64         0.0%       295
+  classification      object          0.0%         3
+  reporting_status    object          0.0%         1
+  tempus_test         object          0.0%         1
+
+========================================================================
+FILE: bam_fq_inventory_plusMissing.tsv
+========================================================================
+  Rows: 70,222  |  Columns: 19
+  (dtype / null stats from first 5,000 rows)
+
+  Column                  Dtype          Null%      Uniq
+  ------------------------------------------------------
+  accessionId             object          0.0%     2,145
+  omic                    object          0.0%         2
+  test_parent             object          0.0%         4
+  test_code               object          0.0%         9
+  bam_file_name           object          4.7%     4,767
+  direct_file_source      object          4.5%         2
+  process_category        object          4.5%       196
+  bai_file_name           object          4.5%     4,774
+  fastq_filename          object         96.7%        80
+  icd10_code              object          7.5%     1,235
+  tempusId                object          5.8%     1,920
+  N_T_naming              object          4.7%         2
+  sampleSite              object          8.5%       600
+  primarySampleSite       float64       100.0%         0
+  diagnosisDate           object         36.0%       895
+  collectionDate          object          8.5%       883
+  diagnosis               object          8.5%       592
+  originPathLabDiagnosis  float64       100.0%         0
+  contains_bam            bool            0.0%         2
+
+========================================================================
+FILE: bam_tidy_inventory.tsv
+========================================================================
+  Rows: 18,131  |  Columns: 22
+  (dtype / null stats from first 5,000 rows)
+
+  Column                            Dtype          Null%      Uniq
+  ----------------------------------------------------------------
+  accessionId                       object          0.0%     5,000
+  tempusId                          object          0.0%     4,663
+  emrid                             object          0.0%     4,659
+  icd10_code                        object          0.0%     2,631
+  diagnosis                         object         17.2%     1,165
+  diagnosisDate                     object         64.3%     1,210
+  tumorPrimarySampleSite            object         82.8%       461
+  tumorSampleSite                   object         17.2%     1,330
+  sampleCollectionDate              object          0.0%     4,756
+  tempusTestCode                    object          0.0%        18
+  ctDNA_bam                         float64       100.0%         0
+  normal_bam                        object         12.3%     4,385
+  tumor_bam                         object          5.4%     4,728
+  rna_bam_file_name                 object         20.9%     3,957
+  rna_fastq_filename                object         90.3%       485
+  accessionId_hard_filtered         object         99.5%        24
+  tempusTestCode_hard_filtered      object         99.5%         1
+  dna_bam_files_hard_filtered       object         99.5%        24
+  dna_fastq_files_hard_filtered     float64       100.0%         0
+  rna_hard_filtered_bam_file_name   object         99.5%        24
+  rna_hard_filtered_fastq_filename  float64       100.0%         0
+  emrid_present                     bool            0.0%         1
+
+========================================================================
+FILE: collectionDateDiagnosis.tsv
+========================================================================
+  Rows: 81,346  |  Columns: 10
+  (dtype / null stats from first 5,000 rows)
+
+  Column                  Dtype          Null%      Uniq
+  ------------------------------------------------------
+  Unnamed: 0              int64           0.0%     5,000
+  diagnosis               object         60.5%       783
+  diagnosisDate           object         99.7%         9
+  tempusId                object          0.0%     3,122
+  accessionId             object          0.0%     3,631
+  collectionDate          object          0.0%       934
+  sampleCategory          object          0.0%         4
+  originPathLabDiagnosis  object         64.2%       975
+  primarySampleSite       object         64.2%       621
+  sampleSite              object         60.8%       594
+
+========================================================================
+FILE: expected_vs_observed_summary.tsv
+========================================================================
+  Rows: 18  |  Columns: 5
+  (dtype / null stats from first 18 rows)
+
+  Column       Dtype          Null%      Uniq
+  -------------------------------------------
+  metric       object          0.0%        17
+  expected     float64        22.2%         6
+  observed     float64        38.9%        11
+  missing      float64        38.9%        11
+  pct_missing  object         38.9%        10
+
+========================================================================
+FILE: icd10_allCodes_key.tsv
+========================================================================
+  Rows: 98,186  |  Columns: 5
+  (dtype / null stats from first 5,000 rows)
+
+  Column                  Dtype          Null%      Uniq
+  ------------------------------------------------------
+  Unnamed: 0              int64           0.0%     5,000
+  icd10_root              object          0.0%       407
+  icd10_root_description  object          0.0%       407
+  icd10_code              object          0.0%     5,000
+  icd10_code_description  object          0.0%     4,941
+
+========================================================================
+FILE: icd10_root_key.tsv
+========================================================================
+  Rows: 144  |  Columns: 2
+  (dtype / null stats from first 144 rows)
+
+  Column                  Dtype          Null%      Uniq
+  ------------------------------------------------------
+  icd10_categorical_code  object          0.0%       144
+  icd10_desc              object          0.0%       144
+
+========================================================================
+FILE: incomplete_transfers_nonxf.tsv
+========================================================================
+  Rows: 4,930  |  Columns: 3
+  (dtype / null stats from first 4,930 rows)
+
+  Column        Dtype          Null%      Uniq
+  --------------------------------------------
+  accessionId   object          0.0%     3,061
+  missing_file  object          0.0%         4
+  present_md5   object          0.0%         4
+
+========================================================================
+FILE: incomplete_transfers_xf.tsv
+========================================================================
+  Rows: 525  |  Columns: 3
+  (dtype / null stats from first 525 rows)
+
+  Column        Dtype          Null%      Uniq
+  --------------------------------------------
+  accessionId   object          0.0%       512
+  missing_file  object          0.0%         2
+  present_md5   object          0.0%         2
+
+========================================================================
+FILE: missing_bams_detail.tsv
+========================================================================
+  Rows: 16,867  |  Columns: 4
+  (dtype / null stats from first 5,000 rows)
+
+  Column            Dtype          Null%      Uniq
+  ------------------------------------------------
+  accessionId       object          0.0%     3,909
+  test_code         object          0.0%        12
+  omic              object          0.0%         1
+  missing_bam_type  object          0.0%         2
+
+========================================================================
+FILE: order.tsv
+========================================================================
+  Rows: 63,462  |  Columns: 11
+  (dtype / null stats from first 5,000 rows)
+
+  Column            Dtype          Null%      Uniq
+  ------------------------------------------------
+  Unnamed: 0        int64           0.0%     5,000
+  institution       object          0.0%        22
+  physician         object          0.0%       137
+  tempusOrderId     object          0.0%     2,247
+  accessionId       object          0.0%     4,907
+  test_code         object          0.0%        20
+  test_name         object          6.3%        16
+  test_description  object          7.9%        31
+  tempusId          object          0.0%     1,821
+  reportId          object          0.0%     5,000
+  referenceGenome   object         91.9%         1
+
+========================================================================
+FILE: patient.tsv
+========================================================================
+  Rows: 63,462  |  Columns: 4
+  (dtype / null stats from first 5,000 rows)
+
+  Column      Dtype          Null%      Uniq
+  ------------------------------------------
+  Unnamed: 0  int64           0.0%     5,000
+  tempusid    object          0.0%     1,821
+  emrid       object          5.5%     1,679
+  reportId    object          0.0%     5,000
+
+========================================================================
+FILE: patient_clarity.tsv
+========================================================================
+  Rows: 2,875,154  |  Columns: 10
+  (dtype / null stats from first 5,000 rows)
+
+  Column                     Dtype          Null%      Uniq
+  ---------------------------------------------------------
+  Unnamed: 0                 int64           0.0%     5,000
+  tempusid                   object          0.0%       919
+  emrid                      float64         3.1%       780
+  pat_mrn_id                 int64           0.0%       799
+  reportId                   object          0.0%     3,218
+  tempus_accession           object          0.0%     3,193
+  tempus_returned_diagnosis  object         53.5%       303
+  encounter_id               int64           0.0%     1,248
+  current_icd10_list         object          0.0%       220
+  DX_NAME                    object          0.0%       442
+
+========================================================================
+FILE: procedure_icd10_root_key.tsv
+========================================================================
+  Rows: 145,128  |  Columns: 7
+  (dtype / null stats from first 5,000 rows)
+
+  Column                  Dtype          Null%      Uniq
+  ------------------------------------------------------
+  tempusId                object          0.0%       468
+  accessionId             object          0.0%     1,646
+  icd10_code              object          0.0%       277
+  icd10_code_description  object          0.0%       277
+  icd10_root              object          0.0%        83
+  icd10_root_description  object          0.0%        83
+  PrimarySite             object          0.0%        53
+
+========================================================================
+FILE: raw_variant_dashboard.tsv
+========================================================================
+  Rows: 947,172  |  Columns: 21
+  (dtype / null stats from first 5,000 rows)
+
+  Column                              Dtype          Null%      Uniq
+  ------------------------------------------------------------------
+  Genomic_Variant                     object          0.0%     1,022
+  Consequence                         object          0.0%        35
+  Gene                                object          0.0%       294
+  Transcript                          object          0.0%       743
+  Transcript_Biotype                  object          0.0%         1
+  HGVS.C                              object          0.0%     2,132
+  HGVS.P                              object         24.2%     1,564
+  Transcript_noRef                    object          0.0%       743
+  HGVS.C_update                       object          0.0%     2,129
+  Accession_Count                     float64         0.0%       132
+  ICD-10 Code                         object          0.3%       962
+  ICD-10 Description                  object          0.3%       962
+  ICD-10 Count                        object          0.3%       873
+  Isoform                             object          0.0%        94
+  Somatic reported accession count    int64           0.0%        66
+  Inherited reported accession count  int64           0.0%         5
+  Reported ICD-10 Codes               object          0.0%     1,006
+  Reported ICD-10 Description         object          0.0%     1,006
+  Reported ICD-10 Count               float64         0.0%        84
+  Classification                      object          0.0%        12
+  Reporting Status                    object          0.0%         1
+
+========================================================================
+FILE: tempus_data_request.tsv
+========================================================================
+  Rows: 19,347  |  Columns: 4
+  (dtype / null stats from first 5,000 rows)
+
+  Column                 Dtype          Null%      Uniq
+  -----------------------------------------------------
+  accessionId            object          0.0%     5,000
+  orderedTempusTestCode  object          5.1%        16
+  typeOfSample/Test      object          0.0%         1
+  RequiredFromTempus     bool            0.0%         1
+
+========================================================================
+FILE: vcf_germline_compiled.tsv
+========================================================================
+  Rows: 109,841,066  |  Columns: 8
+  (dtype / null stats from first 5,000 rows)
+
+  Column              Dtype          Null%      Uniq
+  --------------------------------------------------
+  accessionId         object          0.0%         1
+  Genomic_Variant     object          0.0%     2,148
+  Consequence         object          0.0%        20
+  Gene                object          0.0%       718
+  Transcript          object          0.0%     1,605
+  Transcript_Biotype  object          0.0%         1
+  HGVS.C              object          0.0%     3,305
+  HGVS.P              object         68.5%     1,100
+
+========================================================================
+FILE: vcf_presence_nonxf.tsv
+========================================================================
+  Rows: 19,053  |  Columns: 10
+  (dtype / null stats from first 5,000 rows)
+
+  Column                  Dtype          Null%      Uniq
+  ------------------------------------------------------
+  accessionId             object          0.0%     5,000
+  has_DNA_dir             bool            0.0%         2
+  germ.freebayes.vcf      bool            0.0%         2
+  germ.freebayes.vcf.md5  bool            0.0%         2
+  germ.pindel.vcf         bool            0.0%         2
+  germ.pindel.vcf.md5     bool            0.0%         2
+  soma.freebayes.vcf      bool            0.0%         2
+  soma.freebayes.vcf.md5  bool            0.0%         2
+  soma.pindel.vcf         bool            0.0%         2
+  soma.pindel.vcf.md5     bool            0.0%         2
+
+========================================================================
+FILE: vcf_presence_xf.tsv
+========================================================================
+  Rows: 4,624  |  Columns: 6
+  (dtype / null stats from first 4,624 rows)
+
+  Column                Dtype          Null%      Uniq
+  ----------------------------------------------------
+  accessionId           object          0.0%     4,624
+  has_DNA_dir           bool            0.0%         1
+  germ.vardict.vcf      bool            0.0%         2
+  germ.vardict.vcf.md5  bool            0.0%         2
+  soma.vardict.vcf      bool            0.0%         2
+  soma.vardict.vcf.md5  bool            0.0%         2
+
+========================================================================
+FILE: vcf_somatic_compiled.tsv
+========================================================================
+  Rows: 5,315,835  |  Columns: 8
+  (dtype / null stats from first 5,000 rows)
+
+  Column              Dtype          Null%      Uniq
+  --------------------------------------------------
+  accessionId         object          0.0%         9
+  Genomic_Variant     object          0.0%       874
+  Consequence         object          0.0%        26
+  Gene                object          0.0%       360
+  Transcript          object          0.0%       910
+  Transcript_Biotype  object          0.0%         1
+  HGVS.C              object          0.0%     2,025
+  HGVS.P              object         78.1%       637

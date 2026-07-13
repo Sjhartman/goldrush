@@ -15,7 +15,29 @@ SCHEMAS_DIR    = GOLDRUSH_DIR / "schemas"
 COLUMNS_FILE   = SCHEMAS_DIR / "epic_clarity_columns.tsv"
 TEMPUS_COLUMNS = SCHEMAS_DIR / "tempus_columns.tsv"
 
-TEMPUS_PRIORITY_TABLES = ["patient", "order", "specimens", "results", "report"]
+# All Tempus tables whose columns are passed to the specialist LLM.
+# When a versioned (_v2) table supersedes an older one, include only the newer version.
+TEMPUS_SCHEMA_TABLES = [
+    # Core identifiers / order
+    "patient",
+    "order",
+    "report",
+    "specimens_v2",       # preferred over specimens
+    "results",
+    # Somatic variants (clinically reported -- flat, one row per variant)
+    "somaticpotentiallyactionablemutations",
+    "somaticpotentiallyactionablemutationsvariants",  # has allelicFraction (VAF)
+    "somaticbiologicallyrelevantvariants",            # includes fusions, has allelicFraction
+    "somaticvariantsofunknownsignificance",           # somatic VUS, has allelicFraction
+    "somaticpotentiallyactionablecopynumbervariants", # CNV
+    # RNA fusions
+    "fusionvariants",
+    "rnafindings",
+    # Germline findings (clinically reported -- flat, one row per variant)
+    "inheritedrelevantvariantsvalues",
+    "inheritedincidentalfindingsvalues",
+    "inheritedvariantsofunknownsignificancevalues",
+]
 
 _MODEL = None  # set at runtime from env or default
 
@@ -55,9 +77,9 @@ def load_tempus_schema() -> dict:
 
 
 def build_tempus_schema_context(tempus_schema: dict) -> str:
-    """Build a compact schema block for the priority Tempus tables."""
+    """Build a schema block for all Tempus tables used by the specialist."""
     lines = []
-    for t in TEMPUS_PRIORITY_TABLES:
+    for t in TEMPUS_SCHEMA_TABLES:
         cols = tempus_schema.get(t)
         if cols:
             lines.append(f"curated.tempus.{t}: {', '.join(sorted(cols))}")

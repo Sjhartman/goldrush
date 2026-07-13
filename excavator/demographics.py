@@ -36,15 +36,43 @@ PATIENT_RACE table:
 - Decode patient_race_c by joining ZC_PATIENT_RACE on patient_race_c, select NAME.
 - Aggregate multiple races into a list (COLLECT_LIST or CONCAT_WS).
 
-ZC decode rules:
-- sex_c -> join ZC_SEX on sex_c, select NAME
-- ethnic_background_c -> join ZC_ETHNIC_BACKGROUND on ethnic_background_c, select NAME
-- marital_status_c -> join ZC_MARITAL on marital_status_c, select NAME
-- language_c -> join ZC_LANGUAGE on language_c, select NAME
+Confirmed PATIENT column names (use exactly as listed):
+- Sex:       PATIENT.sex  (already a decoded string -- NO ZC join needed)
+- Ethnicity: PATIENT.ethnic_group_c -> join ZC_ETHNIC_GROUP on ethnic_group_c, select name
+- Race:      PATIENT_RACE.patient_race_c -> join ZC_PATIENT_RACE on patient_race_c, select name
+- MRN:       PATIENT.pat_mrn_id
+- Name:      PATIENT.pat_name (or pat_first_name, pat_last_name, pat_middle_name)
+- DOB:       PATIENT.birth_date
+- Death:     PATIENT.death_date
+
+ZC tables that do NOT exist in this data lake -- never reference them:
+- ZC_MARITAL, ZC_ETHNIC_BACKGROUND, ZC_SEX (sex_c column does not exist; use PATIENT.sex)
+
+ETHNIC BACKGROUND (detailed multi-row table):
+- ETHNIC_BACKGROUND table: columns are pat_id, line, ethnic_bkgrnd_c
+- Decode ethnic_bkgrnd_c by joining ZC_ETHNIC_BKGRND (NOT ZC_ETHNIC_BACKGROUND) on ethnic_bkgrnd_c
+- ZC_ETHNIC_BKGRND columns: ethnic_bkgrnd_c, name, title, abbr
+- OMB HIGH-LEVEL ethnicity: PATIENT.ethnic_group_c -> join ZC_ETHNIC_GROUP on ethnic_group_c
+- Column alias for OMB ethnicity category: use `ethnicity_omb_category` (OMB = Office of Management and Budget, NOT OMG)
 
 PATIENT table cohort join (cohort first, always):
     FROM curated.epic_clarity.patient pt
     INNER JOIN eligible_cohort ec ON ec.PAT_ID = pt.PAT_ID
+
+FORBIDDEN CTEs -- NEVER define any of these; they are already in the embedded cohort block:
+    tempus_patients, tempus_pat_ids, cohort_icd, gi_hpb_icd, gi_hpb_icd_codes,
+    dx_enc, dx_prob, dx_disch, dx_all, dx_index, dx_index_detail, dx_min, dx_final,
+    dx_index_code, patient_demo, excluded_patients, eligible_cohort
+
+Your WITH clause must begin immediately with a demographics-specific CTE (e.g.,
+patient_demographics, race_agg, identity_ids). If you find yourself writing
+tempus_patients or any other name from the FORBIDDEN list above, delete that block
+and start from eligible_cohort instead.
+
+COLUMN INCLUSION RULE: Only include columns that map to an approved element in this
+request. Standard demographics columns (sex, race, ethnicity, birth date, death date,
+MRN, patient name) are generally safe. Do NOT include marital_status_c or language_c
+unless they appear explicitly in the APPROVED ELEMENTS list for this request.
 
 DO NOT include address columns -- address history is a separate script (Script 3).
 DO NOT include staging, mortality, enrollment, or treatment plan columns.
@@ -53,9 +81,8 @@ DO NOT include staging, mortality, enrollment, or treatment plan columns.
 SYSTEM_PROMPT = specialist_prompt(_DOMAIN_ADDITIONS)
 
 _DEMO_TABLES = {
-    "PATIENT", "PATIENT_RACE", "ETHNIC_BACKGROUND", "IDENTITY_ID",
-    "ZC_SEX", "ZC_PATIENT_RACE", "ZC_ETHNIC_BACKGROUND", "ZC_MARITAL",
-    "ZC_LANGUAGE", "ZC_LANGUAGE_BSLN",
+    "PATIENT", "PATIENT_RACE", "IDENTITY_ID",
+    "ZC_PATIENT_RACE", "ZC_ETHNIC_GROUP",
 }
 
 
@@ -83,10 +110,14 @@ def generate(
 
     prompt = f"""Generate Databricks SQL -- Script 2 of 6: Patient Demographics.
 
-The following CTEs are already defined in the embedded cohort block -- reference them
-directly, do NOT redefine or redeclare any of them:
-- `eligible_cohort (PAT_ID, mrn, index_dx_date, cancer_type, age_at_dx, age_stratum)`
-- `excluded_patients (PAT_ID)`
+IMPORTANT: This script is embedded after Script 1. The following CTEs already exist --
+do NOT write them; start your WITH clause with a demographics-specific CTE instead:
+  eligible_cohort, excluded_patients, tempus_patients, tempus_pat_ids,
+  cohort_icd, gi_hpb_icd, dx_enc, dx_prob, dx_disch, dx_all,
+  dx_index, dx_index_detail, patient_demo
+
+eligible_cohort columns available: PAT_ID, mrn, index_dx_date, cancer_type,
+  index_icd10_code, index_dx_source, age_at_dx, age_stratum
 
 APPROVED ELEMENTS (demographics only -- no staging, notes, addresses, or Tempus):
 {element_list}

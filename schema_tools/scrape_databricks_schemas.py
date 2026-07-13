@@ -54,7 +54,7 @@ def default_tables_file(catalog: str) -> Path:
 
 def default_output_file(catalog: str) -> Path:
     schema = _schema_name(catalog)
-    return SCHEMAS_DIR / f"{schema}_columns.tsv"
+    return Path(f"{schema}_columns.tsv")
 
 
 def load_tables(tables_path: Path, catalog: str) -> list:

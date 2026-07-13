@@ -18,6 +18,53 @@ def strip_fences(sql: str) -> str:
     return sql.strip()
 
 
+def _strip_final_select(sql: str) -> str:
+    """Remove the final SELECT statement from a SQL string, leaving only CTEs.
+
+    Finds the first SELECT keyword at paren depth 0 that is NOT immediately
+    preceded by 'AS' (i.e. not a CTE body SELECT), then truncates there.
+    This prevents extract_cte_block from including depth-0 parens inside
+    the final SELECT (e.g. correlated subqueries) as CTE closings.
+    """
+    depth = 0
+    in_line = in_block = in_str = False
+    q = None
+    i = 0
+    while i < len(sql):
+        c = sql[i]
+        if in_line:
+            if c == '\n':
+                in_line = False
+        elif in_block:
+            if sql[i:i+2] == '*/':
+                in_block = False
+                i += 1
+        elif in_str:
+            if c == q:
+                in_str = False
+        else:
+            if sql[i:i+2] == '--':
+                in_line = True
+                i += 1
+            elif sql[i:i+2] == '/*':
+                in_block = True
+                i += 1
+            elif c in ("'", '"', '`'):
+                in_str = True
+                q = c
+            elif c == '(':
+                depth += 1
+            elif c == ')':
+                depth -= 1
+            elif depth == 0 and sql[i:i+6].upper() == 'SELECT':
+                # Only truncate if this SELECT is not a CTE body (preceded by 'AS (')
+                before = sql[:i].rstrip()
+                if not before.endswith('('):
+                    return sql[:i].rstrip()
+        i += 1
+    return sql
+
+
 def extract_cte_block(sql: str) -> str:
     """Return everything up to and including the closing paren of the last CTE.
 
@@ -109,6 +156,64 @@ def _strip_first_leading_comma(text: str) -> str:
     return ''.join(lines)
 
 
+def strip_cohort_prefix(sql: str) -> str:
+    """Strip the cohort-building CTE block if the extraction script re-derived it.
+
+    If the model generated eligible_cohort from scratch inside the extraction
+    script, this removes everything from the WITH block through the closing paren
+    of the eligible_cohort CTE, leaving only extraction-specific CTEs and the
+    final SELECT. Returns sql unchanged if eligible_cohort is not defined in it.
+    """
+    m = re.search(r'\beligible_cohort\s+AS\s*\(', sql, re.IGNORECASE)
+    if not m:
+        return sql
+
+    start = m.end() - 1  # position of the opening '('
+    depth = 0
+    in_line = in_block = in_str = False
+    q = None
+    i = start
+    end_pos = -1
+    while i < len(sql):
+        c = sql[i]
+        if in_line:
+            if c == '\n':
+                in_line = False
+        elif in_block:
+            if sql[i:i+2] == '*/':
+                in_block = False
+                i += 1
+        elif in_str:
+            if c == q:
+                in_str = False
+        else:
+            if sql[i:i+2] == '--':
+                in_line = True
+                i += 1
+            elif sql[i:i+2] == '/*':
+                in_block = True
+                i += 1
+            elif c in ("'", '"', '`'):
+                in_str = True
+                q = c
+            elif c == '(':
+                depth += 1
+            elif c == ')':
+                depth -= 1
+                if depth == 0:
+                    end_pos = i
+                    break
+        i += 1
+
+    if end_pos == -1:
+        return sql
+
+    remainder = sql[end_pos + 1:].lstrip()
+    if remainder.startswith(','):
+        remainder = remainder[1:].lstrip()
+    return remainder
+
+
 def embed_cohort(cohort_sql: str, extraction_sql: str) -> str:
     """Prepend the cohort CTE block into an extraction script.
 
@@ -116,7 +221,7 @@ def embed_cohort(cohort_sql: str, extraction_sql: str) -> str:
     extraction_sql should be stripped of fences before calling.
     The result is a self-contained query that reads only from the data lake.
     """
-    cte_block = _strip_leading_comments(extract_cte_block(cohort_sql))
+    cte_block = _strip_leading_comments(extract_cte_block(_strip_final_select(cohort_sql)))
 
     extraction = extraction_sql.replace(
         'curated.epic_clarity.eligible_cohort', 'eligible_cohort'

@@ -68,18 +68,24 @@ LARGE TABLES REQUIRING THIS TREATMENT:
 
 IMPORTANT EXCEPTIONS -- do NOT flag these as violations:
 
-1. SCRIPT 1 (COHORT DEFINITION): Script 1 is the script that BUILDS eligible_cohort.
-   CTEs defined before eligible_cohort in Script 1 cannot join it because it does not
-   exist yet. In Script 1, `tempus_pat_ids` (the Tempus-patient bridge CTE) is the
-   valid cohort anchor and plays the same role as eligible_cohort does in later scripts.
-   Any large-table CTE in Script 1 that joins `tempus_pat_ids` as its first join is
-   COMPLIANT -- do not flag it. Also, eligible_cohort and excluded_patients being
-   DEFINED in Script 1 is expected and correct -- do not flag their definitions.
-   You can detect Script 1 by the presence of a CTE named `tempus_patients` or
-   `tempus_pat_ids` near the top, and eligible_cohort being defined (not just referenced)
-   within the script.
+1. EMBEDDED COHORT BLOCK (Scripts 2-6): Scripts 2-6 have Script 1's full cohort CTE
+   block embedded at the top before their own extraction CTEs. This embedded block
+   defines tempus_patients, tempus_pat_ids, cohort_icd (or gi_hpb_icd / similar),
+   dx_enc, dx_prob, dx_disch, dx_all, dx_index, dx_index_detail, patient_demo,
+   excluded_patients, and eligible_cohort. All of these are the CANONICAL cohort
+   definitions from Script 1 -- they are correct and must NOT be flagged as violations.
+   To identify the embedded block: it starts at the top of the WITH clause and ends
+   at the closing paren of the eligible_cohort CTE definition.
+   The extraction-specific CTEs begin AFTER the eligible_cohort CTE.
+   Only flag CTEs that appear AFTER eligible_cohort if they join tempus_pat_ids instead
+   of eligible_cohort, or violate other contract rules.
 
-2. DIMENSION / LOOKUP TABLES: EDG_CURRENT_ICD10 is a code-lookup table (DX_ID -> CODE)
+2. SCRIPT 1 (COHORT DEFINITION) standalone: If no embedded block is present and the
+   script is clearly Script 1 (builds eligible_cohort from scratch, has tempus_patients
+   near the top), tempus_pat_ids is the valid cohort anchor and large-table CTEs that
+   join it are COMPLIANT.
+
+3. DIMENSION / LOOKUP TABLES: EDG_CURRENT_ICD10 is a code-lookup table (DX_ID -> CODE)
    with no PAT_ID column. A CTE that pre-filters it by ICD code range (e.g.,
    `WHERE CODE LIKE 'C15%'`) is a valid and intentional dimension pre-filter, not a
    patient-fact scan. Do NOT flag EDG_CURRENT_ICD10 pre-filter CTEs as violations.
@@ -93,7 +99,14 @@ SCRIPT ({label}):
 {sql}
 
 Call submit_contract_check with your findings. Be precise about which CTE and table
-each violation involves and how to fix it."""
+each violation involves and how to fix it.
+
+IMPORTANT: If after analysis you determine a CTE is compliant (e.g., it falls under
+Exception 1 or 2 above and no fix is needed), do NOT include it in the violations array.
+Only include genuine violations that require a code change. Set passed=true if all
+large-table CTEs are compliant, even if you needed to reason through exceptions to reach
+that conclusion. A finding with remediation="No change needed" is not a violation --
+omit it from the violations array entirely."""
 
     response = client.messages.create(
         model=MODEL,

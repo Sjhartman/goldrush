@@ -126,7 +126,16 @@ Your job is to produce a structured JSON report with exactly these fields:
     "inclusion_criteria": ["list of criteria from the IRB formal eligibility section"],
     "exclusion_criteria": ["study-specific exclusion criteria from the IRB formal eligibility section only -- NOT boilerplate vulnerability categories (minors, prisoners, pregnant women) from standard IRB template sections"],
     "approved_data_elements": ["list of data types approved"],
-    "approval_expiry": "date string or null"
+    "approval_expiry": "date string or null",
+    "rdc_authorization": {
+      "present": false,
+      "irb_id": "IRB ID string or null",
+      "pi": "RDC PI name or null",
+      "date_start": "YYYY-MM-DD earliest authorized date for RDC-sourced data, or null",
+      "date_end": "YYYY-MM-DD hard end of the RDC retrospective window -- null if the authorization is prospective/ongoing with no stated cutoff",
+      "is_prospective": false,
+      "notes": "any caveats about the RDC date window or scope"
+    }
   },
   "request_summary": {
     "requester": "string or null",
@@ -252,6 +261,20 @@ GENOMIC DATA SOURCE AUTHORIZATION -- apply when Tempus or NGS data is requested:
   and this authorization is absent from the IRB protocol. Set overall_status to DENIED.
 - If the IRB does reference the RDC/I2DB authorization: the genomic data element may proceed
   to be evaluated on its own merits (approved, ambiguous, or denied) based on the IRB scope.
+
+RDC DATE WINDOW -- extract when RDC/I2DB authorization is present:
+The I2DB RDC is a data warehouse that provides BOTH Tempus genomic data AND matched EHR
+data for the same patients. When the IRB references the RDC, its date window governs all
+data accessed through it -- not just Tempus tables. Populate irb_summary.rdc_authorization:
+- present: true if the IRB references I2DB/RDC, false otherwise
+- date_start: the earliest date of authorized RDC data (often 2001-01-01 for the WashU RDC)
+- date_end: set to null if the IRB lists the RDC authorization as prospective or ongoing --
+  a date that appears alongside "prospective" is the amendment date, not a hard cutoff
+- is_prospective: true if the IRB describes the RDC data source as prospective or ongoing
+- When is_prospective is true, the operative constraint for SQL is a lower bound only
+  (date >= date_start); no upper cutoff should be applied. Do NOT conflate the main IRB
+  protocol's retrospective EHR cutoff (e.g. 05/31/2022 from section 1.24) with the RDC
+  window -- they are separate data pathways with separate date constraints.
 
 PERSONNEL CHECK RULES -- apply these strictly:
 - Set status to NOT_SPECIFIED when the data request does not name any specific personnel
@@ -1238,14 +1261,9 @@ Output is written to --output-dir (or next to the IRB document if not specified)
             except Exception as e:
                 print(f"  WARNING: ICD resolution failed: {e}")
 
-    irb_stem   = irb_path.stem
-    req_stem   = Path(request_arg).stem if Path(request_arg).exists() else "inline"
-    label      = output_dir.parent.name
-    base_name  = f"{label}__{irb_stem}__{req_stem}__{run_id}"
-
     audit_path = write_audit_log(
         str(irb_path), request_arg, irb_format, request_format,
-        result, usage, output_dir, run_id, base_name,
+        result, usage, output_dir, run_id,
         icd_resolution=icd_resolution,
         clarification_arg=clarification_arg,
         clarification_format=clarification_format,
@@ -1256,7 +1274,7 @@ Output is written to --output-dir (or next to the IRB document if not specified)
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         print_report(result)
-    report_path = output_dir / f"report__{base_name}.md"
+    report_path = output_dir / f"report__{run_id}.md"
     report_path.write_text(buf.getvalue())
 
     print_report(result)
